@@ -1,4 +1,4 @@
-# MaterialEditText
+# MaterialTextView
 
 Backported material styled TextView for use on pre-lollipop devices. Supports Android 2.3 API 9 (GINGERBREAD) and up.
 
@@ -130,7 +130,7 @@ Preview
             <item name="android:colorControlActivated">?android:attr/colorAccent</item>
         </style>
     
-    Adding a MaterialEditText widget (layout/activity_main.xml)
+    Adding a MaterialTextView widget (layout/activity_main.xml)
     
     If you use android:elevation it will be replaced with app:elevation.
     If you use android:textAllCaps it will be replaced with app:textAllCaps.
