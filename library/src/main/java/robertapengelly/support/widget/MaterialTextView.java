@@ -297,9 +297,6 @@ public class MaterialTextView extends TextView {
         
         res.getValue(resid, value, true);
         
-        //loadDrawable(res, value, theme);
-        //loadDrawableForCookie(value, value.resourceId, res, theme);
-        
         if (value.string == null)
             throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
                 Integer.toHexString(value.resourceId) + ")  is not a Drawable (color or path): " + value);
@@ -311,7 +308,6 @@ public class MaterialTextView extends TextView {
             try {
             
                 XmlResourceParser rp = res.getAssets().openXmlResourceParser(value.assetCookie, file);
-                //dr = LollipopDrawablesCompat.createFromXml(res, rp, theme);
                 checkIfCanHaveElevationFromXml(res, rp);
                 
                 rp.close();
@@ -406,10 +402,7 @@ public class MaterialTextView extends TextView {
                     if ((depth > innerDepth) || !parser.getName().equals("item"))
                         continue;
                     
-                    //final ChildDrawable layer = new ChildDrawable();
-                    
                     final TypedArray a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.LayerDrawableItem);
-                    //updateLayerFromTypedArray(theme, null, layer, a);
                     
                     int id = getResourceId(getContext().getTheme(), a, null,
                         R.styleable.LayerDrawableItem_android_id, View.NO_ID);
