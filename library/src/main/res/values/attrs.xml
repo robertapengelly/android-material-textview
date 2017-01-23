@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<resources>
+
+    <declare-styleable name="MaterialTextView">
+    
+        <!-- Use when defining RippleDrawable through xml.
+             If RippleDrawable is set as android:backgroud an invalid drawable tag ripple
+             exception will be thrown on pre-lollipop devices. -->
+        <attr format="reference" name="background" />
+        
+        <!-- base z depth of the view -->
+        <attr format="dimension" name="elevation" />
+        
+        <!-- Present the text in ALL CAPS. This may use a small-caps form when available. -->
+        <attr format="boolean" name="textAllCaps" />
+        
+        <!-- A drawable to use as the background.  This can be either a reference
+             to a full drawable resource (such as a PNG image, 9-patch,
+             XML state list description, etc), or a solid color such as "#ff000000"
+            (black). -->
+        <attr name="android:background" />
+        
+        <!-- Sets the padding, in pixels, of all four edges.  Padding is defined as
+             space between the edges of the view and the view's content. A views size
+             will include it's padding.  If a {@link android.R.attr#background}
+             is provided, the padding will initially be set to that (0 if the
+             drawable does not have padding).  Explicitly setting a padding value
+             will override the corresponding padding found in the background. -->
+        <attr name="android:padding" />
+        
+        <!-- Sets the padding, in pixels, of the bottom edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingBottom" />
+        
+        <!-- Sets the padding, in pixels, of the end edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingEnd" />
+        
+        <!-- Sets the padding, in pixels, of the left edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingLeft" />
+        
+        <!-- Sets the padding, in pixels, of the right edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingRight" />
+        
+        <!-- Sets the padding, in pixels, of the start edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingStart" />
+        
+        <!-- Sets the padding, in pixels, of the top edge; see {@link android.R.attr#padding}. -->
+        <attr name="android:paddingTop" />
+        
+        <!-- Base text color, typeface, size, and style. -->
+        <attr name="android:textAppearance" />
+        
+        <!-- Reference to a drawable that will be drawn under the insertion cursor. -->
+        <attr name="android:textCursorDrawable" />
+        
+        <!-- Reference to a drawable that will be used to display a text selection
+             anchor for positioning the cursor within text. -->
+        <attr name="android:textSelectHandle" />
+        
+        <!-- Reference to a drawable that will be used to display a text selection
+             anchor on the left side of a selection region. -->
+        <attr name="android:textSelectHandleLeft" />
+        
+        <!-- Reference to a drawable that will be used to display a text selection
+             anchor on the right side of a selection region. -->
+        <attr name="android:textSelectHandleRight" />
+    
+    </declare-styleable>
+    
+    <declare-styleable name="TextAppearance">
+    
+        <!-- Present the text in ALL CAPS. This may use a small-caps form when available. -->
+        <attr name="textAllCaps" />
+    
+    </declare-styleable>
+
+</resources>
