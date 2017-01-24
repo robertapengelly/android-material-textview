@@ -221,8 +221,10 @@ public class MaterialTextView extends TextView {
         mDefaultPaddingRight = a.getDimensionPixelSize(R.styleable.MaterialTextView_android_paddingRight, defaultPadding);
         mDefaultPaddingTop = a.getDimensionPixelSize(R.styleable.MaterialTextView_android_paddingTop, defaultPadding);
         
-        setAllCaps(a.getBoolean(R.styleable.MaterialTextView_textAllCaps, false));
         setElevation(a.getDimensionPixelOffset(R.styleable.MaterialTextView_elevation, 0));
+        
+        if (a.hasValue(R.styleable.MaterialTextView_textAllCaps))
+            setAllCaps(a.getBoolean(R.styleable.MaterialTextView_textAllCaps, false));
         
         a.recycle();
         
@@ -746,8 +748,6 @@ public class MaterialTextView extends TextView {
      */
     public void setAllCaps(boolean allCaps) {
     
-        android.util.Log.i("MaterialTextView", "setAllCaps " + allCaps);
-        
         if (allCaps)
             setTransformationMethod(new AllCapsTransformationMethod(getContext()));
         else
@@ -906,6 +906,35 @@ public class MaterialTextView extends TextView {
         if (colorAccent == 0)
             if (Build.VERSION.SDK_INT >= 21)
                 colorAccent = getColorFromAttrRes(getContext(), android.R.attr.colorAccent);
+        
+        if (colorAccent == 0) {
+        
+            final TypedArray aa = getContext().obtainStyledAttributes(new int[] { android.R.attr.windowBackground });
+            final int themeColorBackground = aa.getColor(0, 0);
+            aa.recycle();
+            
+            final float[] hsv = new float[3];
+            Color.colorToHSV(themeColorBackground, hsv);
+            
+            if (hsv[2] > 0.5f) {
+            
+                if (Build.VERSION.SDK_INT >= 23)
+                    colorAccent = getResources().getColor(R.color.accent_material_light, getContext().getTheme());
+                else
+                    //noinspection deprecation
+                    colorAccent = getResources().getColor(R.color.accent_material_light);
+            
+            } else {
+            
+                if (Build.VERSION.SDK_INT >= 23)
+                    colorAccent = getResources().getColor(R.color.accent_material_dark, getContext().getTheme());
+                else
+                    //noinspection deprecation
+                    colorAccent = getResources().getColor(R.color.accent_material_dark);
+            
+            }
+        
+        }
         
         drawable.setTint(colorAccent);
     
