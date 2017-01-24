@@ -130,7 +130,7 @@ Preview
     Adding a MaterialTextView widget (layout/activity_main.xml)
     
     If you use android:elevation it will be replaced with app:elevation.
-    If you use android:textAllCaps it will be replaced with app:textAllCaps.
+    If you use android:textAllCaps it will be replaced with app:textAllCaps if specified.
     
     If you want to use a ripple background on all-devices add app:background="@drawable/your_drawable_name" and it will be inflated.
     When you use app:background it will only take effect if there's no background.
