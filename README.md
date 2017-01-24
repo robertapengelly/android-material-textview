@@ -22,7 +22,7 @@ Preview
     Step 2. Add the dependency
     
     dependencies {
-        compile 'com.github.robertapengelly:android-material-textview:1.0.0'
+        compile 'com.github.robertapengelly:android-material-textview:1.0.1'
     }
 
 # Usage
@@ -61,7 +61,6 @@ Preview
             
             <!-- Color palette -->
             <item name="colorAccent">@color/accent_material_dark</item>
-            <item name="colorControlActivated">?attr/colorAccent</item>
         </style>
     
     Honycomb and newer (values-v11/styles.xml)
@@ -94,7 +93,6 @@ Preview
             
             <!-- Color palette -->
             <item name="colorAccent">@color/accent_material_dark</item>
-            <item name="colorControlActivated">?attr/colorAccent</item>
         </style>
     
     Lollipop and newer (values-v21/styles.xml)
@@ -127,7 +125,6 @@ Preview
             
             <!-- Color palette -->
             <item name="android:colorAccent">@color/accent_material_dark</item>
-            <item name="android:colorControlActivated">?android:attr/colorAccent</item>
         </style>
     
     Adding a MaterialTextView widget (layout/activity_main.xml)
