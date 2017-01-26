@@ -3,8 +3,8 @@
 
     <declare-styleable name="MaterialTextView">
     
-        <!-- Use when defining RippleDrawable through xml.
-             If RippleDrawable is set as android:backgroud an invalid drawable tag ripple
+        <!-- Use when defining newer drawables through xml.
+             If newer drawables are set as android:backgroud an invalid drawable tag ripple
              exception will be thrown on pre-lollipop devices. -->
         <attr format="reference" name="background" />
         

@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <resources>
 
-    <color name="accent_material_dark">@color/material_deep_teal_200</color>
-    <color name="accent_material_light">@color/material_deep_teal_500</color>
-    
     <color name="bright_foreground_material_dark">@android:color/white</color>
     <color name="bright_foreground_material_light">@android:color/black</color>
     
@@ -38,26 +35,15 @@
     <eat-comment />
     
     <color name="primary_text_default_material_dark">#ffffffff</color>
-    <color name="secondary_text_default_material_dark">#b3ffffff</color>
-    
     <color name="primary_text_default_material_light">#de000000</color>
-    <color name="secondary_text_default_material_light">#8a000000</color>
     
     <!-- 30% of default values -->
     <color name="primary_text_disabled_material_dark">#4Dffffff</color>
-    <color name="secondary_text_disabled_material_dark">#36ffffff</color>
     
     <!-- 26% of default values -->
     <color name="primary_text_disabled_material_light">#39000000</color>
-    <color name="secondary_text_disabled_material_light">#24000000</color>
     
     <item format="float" name="disabled_alpha_material_dark" type="dimen">0.30</item>
     <item format="float" name="disabled_alpha_material_light" type="dimen">0.26</item>
-    
-    <!-- Primary & accent colors -->
-    <eat-comment />
-    
-    <color name="material_deep_teal_200">#ff80cbc4</color>
-    <color name="material_deep_teal_500">#ff009688</color>
 
 </resources>

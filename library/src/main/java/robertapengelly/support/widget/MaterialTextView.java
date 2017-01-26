@@ -21,6 +21,7 @@ import  android.text.method.TransformationMethod;
 import  android.util.AttributeSet;
 import  android.util.TypedValue;
 import  android.util.Xml;
+import  android.view.MotionEvent;
 import  android.view.View;
 import  android.view.ViewGroup;
 import  android.view.accessibility.AccessibilityEvent;
@@ -36,16 +37,19 @@ import  java.util.Locale;
 import  org.xmlpull.v1.XmlPullParser;
 import  org.xmlpull.v1.XmlPullParserException;
 
+import  robertapengelly.support.graphics.drawable.GradientDrawable;
+import  robertapengelly.support.graphics.drawable.LayerDrawable;
 import  robertapengelly.support.graphics.drawable.LollipopDrawable;
 import  robertapengelly.support.graphics.drawable.LollipopDrawablesCompat;
 import  robertapengelly.support.materialtextview.R;
+import  robertapengelly.support.view.DrawableHotspotTouch;
 
 public class MaterialTextView extends TextView {
 
     // used to calculate content padding
-    final static double COS_45 = Math.cos(Math.toRadians(45));
+    private final static double COS_45 = Math.cos(Math.toRadians(45));
     
-    final static float SHADOW_MULTIPLIER = 1.5f;
+    private final static float SHADOW_MULTIPLIER = 1.5f;
     
     // extra shadow to avoid gaps between view and shadow
     private final int mInsetShadow;
@@ -54,9 +58,6 @@ public class MaterialTextView extends TextView {
     private final int mShadowStartColor;
     
     private final RectF mBounds;
-    
-    private boolean mBackgroundNeedsUpdate = false;
-    private boolean mCanHaveElevation = false;
     
     private float mElevation = 0;
     
@@ -71,6 +72,11 @@ public class MaterialTextView extends TextView {
     private int mDefaultPaddingRight;
     private int mDefaultPaddingTop;
     
+    private int mElevationAlpha = 0;
+    
+    private DrawableHotspotTouch mDrawableHotspotTouch;
+    private Drawable mBackground;
+    
     private Object mEditor;
     
     private Paint mCornerShadowPaint;
@@ -83,7 +89,7 @@ public class MaterialTextView extends TextView {
     }
     
     public MaterialTextView(Context context, AttributeSet attrs) {
-        this(context, attrs, android.R.attr.textViewStyle);
+        this(context, attrs, android.R.attr.textStyle);
     }
     
     public MaterialTextView(Context context, AttributeSet attrs, int defStyleAttr) {
@@ -102,7 +108,7 @@ public class MaterialTextView extends TextView {
         
         }
         
-        TypedArray a = context.getTheme().obtainStyledAttributes(attrs, R.styleable.MaterialTextView, defStyleAttr, 0);
+        TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.MaterialTextView, defStyleAttr, 0);
         
         int ap = a.getResourceId(R.styleable.MaterialTextView_android_textAppearance, -1);
         
@@ -119,34 +125,17 @@ public class MaterialTextView extends TextView {
             
                 int resid = a.getResourceId(attr, 0);
                 
-                if (resid == 0) {
+                if (resid != 0) {
                 
-                    int color = a.getColor(attr, 0);
-                    
-                    if (color != 0) {
-                    
-                        int elevationAlpha = Integer.parseInt(String.format("#%06X", color).substring(1, 3), 16);
-                        
-                        if (elevationAlpha == 255)
-                            mCanHaveElevation = true;
-                    
-                    }
-                    
+                    setBackgroundResource(resid);
                     continue;
                 
                 }
                 
-                // Convert the background to a LollipopDrawable to use theme references in xml on pre-lollipop devices.
-                Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(),
-                    resid, context.getTheme());
+                int color = a.getColor(attr, 0);
                 
-                if (Build.VERSION.SDK_INT >= 16)
-                    setBackground(drawable);
-                else
-                    //noinspection deprecation
-                    setBackgroundDrawable(drawable);
-                
-                checkIfCanHaveElevation(resid);
+                if (color != 0)
+                    setBackgroundColor(color);
             
             } else if (attr == R.styleable.MaterialTextView_android_textCursorDrawable) {
             
@@ -161,9 +150,6 @@ public class MaterialTextView extends TextView {
                 
                     Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
                     
-                    if (resid == R.drawable.text_cursor_material)
-                        tintDrawable((LollipopDrawable) drawable);
-                    
                     Field field = mEditor.getClass().getDeclaredField("mCursorDrawable");
                     field.setAccessible(true);
                     field.set(mEditor, new Drawable[] { drawable, drawable });
@@ -173,42 +159,33 @@ public class MaterialTextView extends TextView {
             } else if (attr == R.styleable.MaterialTextView_android_textSelectHandleLeft) {
             
                 int resid = a.getResourceId(attr, 0);
-                setTextSelectHandle("mSelectHandleLeft", resid, (resid == R.drawable.text_select_handle_left_material));
+                setTextSelectHandle("mSelectHandleLeft", resid);
             
             } else if (attr == R.styleable.MaterialTextView_android_textSelectHandle) {
             
                 int resid = a.getResourceId(attr, 0);
-                setTextSelectHandle("mSelectHandleCenter", resid, (resid == R.drawable.text_select_handle_middle_material));
+                setTextSelectHandle("mSelectHandleCenter", resid);
             
             } else if (attr == R.styleable.MaterialTextView_android_textSelectHandleRight) {
             
                 int resid = a.getResourceId(attr, 0);
-                setTextSelectHandle("mSelectHandleRight", resid, (resid == R.drawable.text_select_handle_right_material));
+                setTextSelectHandle("mSelectHandleRight", resid);
             
             } else if (attr == R.styleable.MaterialTextView_background) {
             
-                // We only want to apply the compatibility background if android:background wasn't specified.
-                // The app:background should only be used for <ripple> xml because on pre-lollipop devices
-                // an invalid drawable tag ripple exception will be thrown if android:background is provided.
-                if (getBackground() == null) {
+                int resid = a.getResourceId(attr, 0);
                 
-                    int resid = a.getResourceId(attr, 0);
-                    
-                    if (resid == 0)
-                        continue;
-                    
-                    Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(),
-                        resid, context.getTheme());
-                    
-                    if (Build.VERSION.SDK_INT >= 16)
-                        setBackground(drawable);
-                    else
-                        //noinspection deprecation
-                        setBackgroundDrawable(drawable);
-                    
-                    checkIfCanHaveElevation(resid);
+                if (resid != 0) {
+                
+                    setBackgroundResource(resid);
+                    continue;
                 
                 }
+                
+                int color = a.getColor(attr, 0);
+                
+                if (color != 0)
+                    setBackgroundColor(color);
             
             }
         
@@ -221,7 +198,8 @@ public class MaterialTextView extends TextView {
         mDefaultPaddingRight = a.getDimensionPixelSize(R.styleable.MaterialTextView_android_paddingRight, defaultPadding);
         mDefaultPaddingTop = a.getDimensionPixelSize(R.styleable.MaterialTextView_android_paddingTop, defaultPadding);
         
-        setElevation(a.getDimensionPixelOffset(R.styleable.MaterialTextView_elevation, 0));
+        if (a.hasValue(R.styleable.MaterialTextView_elevation))
+            setElevation(a.getDimensionPixelOffset(R.styleable.MaterialTextView_elevation, 0));
         
         if (a.hasValue(R.styleable.MaterialTextView_textAllCaps))
             setAllCaps(a.getBoolean(R.styleable.MaterialTextView_textAllCaps, false));
@@ -231,18 +209,17 @@ public class MaterialTextView extends TextView {
         mBounds = new RectF();
         
         mCornerShadowPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+        mCornerShadowPaint.setAlpha(mElevationAlpha);
         mCornerShadowPaint.setStyle(Paint.Style.FILL);
         
         mEdgeShadowPaint = new Paint(mCornerShadowPaint);
+        mEdgeShadowPaint.setAlpha(mElevationAlpha);
         mEdgeShadowPaint.setAntiAlias(false);
         
         // shadow variables
         mInsetShadow = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1, getResources().getDisplayMetrics());
         mShadowEndColor = Color.parseColor("#03000000");
         mShadowStartColor = Color.parseColor("#37000000");
-        
-        if (Build.VERSION.SDK_INT >= 21)
-            setClipToOutline(true);
     
     }
     
@@ -292,157 +269,10 @@ public class MaterialTextView extends TextView {
     
     }
     
-    private void checkIfCanHaveElevation(int resid) {
-    
-        Resources res = getResources();
-        TypedValue value = new TypedValue();
-        
-        res.getValue(resid, value, true);
-        
-        if (value.string == null)
-            throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
-                Integer.toHexString(value.resourceId) + ")  is not a Drawable (color or path): " + value);
-        
-        String file = value.string.toString();
-        
-        if (file.endsWith(".xml")) {
-        
-            try {
-            
-                XmlResourceParser rp = res.getAssets().openXmlResourceParser(value.assetCookie, file);
-                checkIfCanHaveElevationFromXml(res, rp);
-                
-                rp.close();
-            
-            } catch (Exception ignored) {}
-        
-        }
-    
-    }
-    
-    private void checkIfCanHaveElevationFromXml(Resources r, XmlPullParser parser) throws XmlPullParserException, IOException {
-    
-        AttributeSet attrs = Xml.asAttributeSet(parser);
-        
-        int type;
-        
-        //noinspection StatementWithEmptyBody
-        while (((type = parser.next()) != XmlPullParser.START_TAG) && (type != XmlPullParser.END_DOCUMENT));
-        
-        if (type != XmlPullParser.START_TAG)
-            throw new XmlPullParserException("No start tag found");
-        
-        checkIfCanHaveElevationFromXmlInner(r, parser, attrs);
-    
-    }
-    
-    public void checkIfCanHaveElevationFromXmlInner(Resources r, XmlPullParser parser, AttributeSet attrs)
-        throws XmlPullParserException, IOException {
-        
-        String name = parser.getName();
-        
-        try {
-        
-            if (name.equals("shape")) {
-            
-                TypedArray a;
-                
-                final int innerDepth = (parser.getDepth() + 1);
-                int depth, type;
-                
-                while (((type = parser.next()) != XmlPullParser.END_DOCUMENT)
-                    && (((depth = parser.getDepth()) >= innerDepth) || (type != XmlPullParser.END_TAG))) {
-                    
-                    if (type != XmlPullParser.START_TAG)
-                        continue;
-                    
-                    if (depth > innerDepth)
-                        continue;
-                    
-                    name = parser.getName();
-                    
-                    if (name.equals("solid")) {
-                    
-                        a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.GradientDrawableSolid);
-                        
-                        final ColorStateList colorStateList =
-                            a.getColorStateList(R.styleable.GradientDrawableSolid_android_color);
-                        
-                        a.recycle();
-                        
-                        if (colorStateList != null ) {
-                        
-                            int color = colorStateList.getDefaultColor();
-                            
-                            if (color != 0) {
-                            
-                                int elevationAlpha = Integer.parseInt(String.format("#%06X", color).substring(1, 3), 16);
-                                
-                                if (elevationAlpha == 255)
-                                    mCanHaveElevation = true;
-                            
-                            }
-                        
-                        }
-                    
-                    }
-                
-                }
-            
-            } else if (name.equals("layer-list") || name.equals("ripple")) {
-            
-                final int innerDepth = (parser.getDepth() + 1);
-                
-                int depth, type;
-                
-                while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
-                    || (type != XmlPullParser.END_TAG))) {
-                    
-                    if (type != XmlPullParser.START_TAG)
-                        continue;
-                    
-                    if ((depth > innerDepth) || !parser.getName().equals("item"))
-                        continue;
-                    
-                    final TypedArray a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.LayerDrawableItem);
-                    
-                    int id = getResourceId(getContext().getTheme(), a, null,
-                        R.styleable.LayerDrawableItem_android_id, View.NO_ID);
-                    
-                    if (id != android.R.id.mask) {
-                    
-                        Drawable dr = getDrawable(getContext().getTheme(), a, null,
-                            R.styleable.LayerDrawableItem_android_drawable);
-                        
-                        if (dr == null) {
-                        
-                            //noinspection StatementWithEmptyBody
-                            while ((type = parser.next()) == XmlPullParser.TEXT);
-                            
-                            if (type != XmlPullParser.START_TAG)
-                                throw new XmlPullParserException(parser.getPositionDescription()
-                                    + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
-                            
-                            checkIfCanHaveElevationFromXmlInner(r, parser, attrs);
-                        
-                        }
-                    
-                    }
-                    
-                    a.recycle();
-                
-                }
-            
-            }
-        
-        } catch (Exception ignored) {}
-    
-    }
-    
     @Override
     public void draw(Canvas canvas) {
     
-        if ((Build.VERSION.SDK_INT < 21) && mCanHaveElevation) {
+        if (Build.VERSION.SDK_INT < 21) {
         
             canvas.translate(0, mRawShadowSize / 2);
             drawShadow(canvas);
@@ -451,23 +281,6 @@ public class MaterialTextView extends TextView {
         }
         
         super.draw(canvas);
-        
-        if (mBackgroundNeedsUpdate) {
-        
-            mBackgroundNeedsUpdate = false;
-            
-            if (getBackground() != null) {
-            
-                int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
-                
-                Drawable background = getBackground();
-                background.setBounds(0, 0, getMeasuredWidth (), (getMeasuredHeight () - vOffset));
-                
-                invalidate();
-            
-            }
-        
-        }
     
     }
     
@@ -531,65 +344,233 @@ public class MaterialTextView extends TextView {
     
     }
     
-    private static int getColorFromAttrRes(Context context, int attr) {
+    @Override
+    public Drawable getBackground() {
     
-        TypedArray a = context.obtainStyledAttributes(new int[] { attr });
+        if (mBackground == null)
+            return super.getBackground();
         
-        try {
-            return a.getColor(0, 0);
-        } finally {
-            a.recycle();
-        }
+        return mBackground;
     
     }
     
-    /**
-     * Retrieve the Drawable for the attribute at <var>index</var>.
-     *
-     * @param index Index of attribute to retrieve.
-     * @return Drawable for the attribute, or null if not defined.
-     */
-    private static Drawable getDrawable(Resources.Theme theme, TypedArray a, TypedValue[] values, int index) {
-    
-        final int[] TEMP_ARRAY = new int[1];
-        
-        if ((values != null) && (theme != null)) {
-        
-            TypedValue v = values[index];
-            
-            if (v.type == TypedValue.TYPE_ATTRIBUTE) {
-            
-                TEMP_ARRAY[0] = v.data;
-                TypedArray tmp = theme.obtainStyledAttributes(null, TEMP_ARRAY, 0, 0);
-                
-                try {
-                    return tmp.getDrawable(0);
-                } finally {
-                    tmp.recycle();
-                }
-            
-            }
-        
-        }
-        
-        if (a != null)
-            return LollipopDrawablesCompat.getDrawable(a, index, theme);
-        
-        return null;
-    
-    }
-    
-    /**
-     * The base elevation of this view relative to its parent, in pixels.
-     *
-     * @return The base depth position of the view, in pixels.
-     */
     public float getElevation() {
     
         if (Build.VERSION.SDK_INT >= 21)
             return super.getElevation();
         
         return mElevation;
+    
+    }
+    
+    private void getElevationAlphaFromColor(int color) {
+    
+        String hexColor = String.format("#%06X", color);
+        mElevationAlpha = Integer.parseInt(hexColor.substring(1, 3), 16);
+        
+        android.util.Log.i("MaterialTextView", "Hex: " + hexColor + ",  Alpha: " + mElevationAlpha);
+    
+    }
+    
+    private void getElevationAlphaFromLayerList(Resources r, XmlPullParser parser, AttributeSet attrs)
+        throws XmlPullParserException, IOException {
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        
+        int depth, type;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
+            || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if ((depth > innerDepth) || !parser.getName().equals("item"))
+                continue;
+            
+            final TypedArray a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.LayerDrawableItem);
+            
+            int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
+            
+            if (resid != 0) {
+            
+                getElevationAlphaFromResource(resid);
+                return;
+            
+            }
+            
+            //noinspection StatementWithEmptyBody
+            while ((type = parser.next()) == XmlPullParser.TEXT);
+            
+            if (type != XmlPullParser.START_TAG)
+                throw new XmlPullParserException(parser.getPositionDescription()
+                    + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
+            
+            getElevationAlphaFromResourceXmlInner(r, parser, attrs);
+            
+            a.recycle();
+        
+        }
+    
+    }
+    
+    private void getElevationAlphaFromResource(int resid) {
+    
+        Resources res = getResources();
+        TypedValue value = new TypedValue();
+        
+        res.getValue(resid, value, true);
+        
+         if (value.string == null)
+            throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
+                Integer.toHexString(value.resourceId) + ")  is not a Drawable (color or path): " + value);
+        
+        String file = value.string.toString();
+        
+        if (file.endsWith(".xml")) {
+        
+            try {
+            
+                XmlResourceParser rp = res.getAssets().openXmlResourceParser(value.assetCookie, file);
+                getElevationAlphaFromResourceXml(res, rp);
+                
+                rp.close();
+            
+            } catch (Exception ignored) {}
+        
+        }
+    
+    }
+    
+    private void getElevationAlphaFromResourceXml(Resources r, XmlPullParser parser) throws XmlPullParserException, IOException {
+    
+        AttributeSet attrs = Xml.asAttributeSet(parser);
+        
+        int type;
+        
+        //noinspection StatementWithEmptyBody
+        while (((type = parser.next()) != XmlPullParser.START_TAG) && (type != XmlPullParser.END_DOCUMENT));
+        
+        if (type != XmlPullParser.START_TAG)
+            throw new XmlPullParserException("No start tag found");
+        
+        getElevationAlphaFromResourceXmlInner(r, parser, attrs);
+    
+    }
+    
+    private void getElevationAlphaFromResourceXmlInner(Resources r, XmlPullParser parser, AttributeSet attrs)
+        throws XmlPullParserException, IOException {
+        
+        String name = parser.getName();
+        
+        try {
+        
+            switch (name) {
+            
+                case "layer-list":
+                    getElevationAlphaFromLayerList(r, parser, attrs);
+                    break;
+                case "ripple":
+                    getElevationAlphaFromRipple(r, parser, attrs);
+                    break;
+                case "shape":
+                    getElevationAlphaFromShape(r, parser, attrs);
+                    break;
+            
+            }
+        
+        } catch (Exception ignored) {}
+    
+    }
+    
+    private void getElevationAlphaFromRipple(Resources r, XmlPullParser parser, AttributeSet attrs)
+        throws XmlPullParserException, IOException {
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        
+        int depth, type;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
+            || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if ((depth > innerDepth) || !parser.getName().equals("item"))
+                continue;
+            
+            final TypedArray a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.LayerDrawableItem);
+            
+            int id = a.getResourceId(R.styleable.LayerDrawableItem_android_id, View.NO_ID);
+            
+            if (id != android.R.id.mask) {
+            
+                int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
+                
+                if (resid != 0) {
+                
+                    getElevationAlphaFromResource(resid);
+                    return;
+                
+                }
+                
+                //noinspection StatementWithEmptyBody
+                while ((type = parser.next()) == XmlPullParser.TEXT);
+                
+                if (type != XmlPullParser.START_TAG)
+                    throw new XmlPullParserException(parser.getPositionDescription()
+                        + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
+                
+                getElevationAlphaFromResourceXmlInner(r, parser, attrs);
+            
+            }
+            
+            a.recycle();
+        
+        }
+    
+    }
+    
+    private void getElevationAlphaFromShape(Resources r, XmlPullParser parser, AttributeSet attrs)
+        throws XmlPullParserException, IOException {
+        
+        String name;
+        TypedArray a;
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        int depth, type;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT)
+            && (((depth = parser.getDepth()) >= innerDepth) || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if (depth > innerDepth)
+                continue;
+            
+            name = parser.getName();
+            
+            if (name.equals("solid")) {
+            
+                a = obtainAttributes(r, getContext().getTheme(), attrs, R.styleable.GradientDrawableSolid);
+                
+                final ColorStateList colorStateList = a.getColorStateList(R.styleable.GradientDrawableSolid_android_color);
+                
+                a.recycle();
+                
+                if (colorStateList != null ) {
+                
+                    int color = colorStateList.getDefaultColor();
+                    
+                    if (color != 0)
+                        getElevationAlphaFromColor(color);
+                
+                }
+            
+            }
+        
+        }
     
     }
     
@@ -611,49 +592,6 @@ public class MaterialTextView extends TextView {
     @Override
     public int getPaddingTop() {
         return mDefaultPaddingTop;
-    }
-    
-    /**
-     * Retrieve the resource identifier for the attribute at
-     * <var>index</var>.  Note that attribute resource as resolved when
-     * the overall {@link TypedArray} object is retrieved.  As a
-     * result, this function will return the resource identifier of the
-     * final resource value that was found, <em>not</em> necessarily the
-     * original resource that was specified by the attribute.
-     *
-     * @param index Index of attribute to retrieve.
-     * @param def   Value to return if the attribute is not defined or
-     *              not a resource.
-     * @return Attribute resource identifier, or defValue if not defined.
-     */
-    private static int getResourceId(Resources.Theme theme, TypedArray a, TypedValue[] values, int index, int def) {
-    
-        final int[] TEMP_ARRAY = new int[1];
-        
-        if ((values != null) && (theme != null)) {
-        
-            TypedValue v = values[index];
-            
-            if (v.type == TypedValue.TYPE_ATTRIBUTE) {
-            
-                TEMP_ARRAY[0] = v.data;
-                TypedArray tmp = theme.obtainStyledAttributes(null, TEMP_ARRAY, 0, 0);
-                
-                try {
-                    return tmp.getResourceId(0, def);
-                } finally {
-                    tmp.recycle();
-                }
-            
-            }
-        
-        }
-        
-        if (a != null)
-            return a.getResourceId(index, def);
-        
-        return def;
-    
     }
     
     /**
@@ -690,49 +628,31 @@ public class MaterialTextView extends TextView {
     
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-    
+        super.onSizeChanged(w, h, oldw, oldh);
+        
         // View is offset SHADOW_MULTIPLIER * maxShadowSize to account for the shadow shift.
         // We could have different top-bottom offsets to avoid extra gap above but in that case
         // center aligning Views inside the CardView would be problematic.
         final float verticalOffset = (mRawShadowSize * SHADOW_MULTIPLIER);
         mBounds.set(mRawShadowSize, verticalOffset, (w - mRawShadowSize), (h - verticalOffset));
         
-        if (mCanHaveElevation) {
+        buildShadowCorners();
         
-            if (buildShadowCorners()) {
+        if ((mBackground != null) && (super.getBackground() != mBackground)) {
+        
+            int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
             
-                mBackgroundNeedsUpdate = true;
-                
-                ViewGroup.LayoutParams params = getLayoutParams();
-                
-                if (params instanceof LinearLayout.LayoutParams) {
-                
-                    int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
-                    
-                    LinearLayout.LayoutParams llparams = (LinearLayout.LayoutParams) params;
-                    llparams.bottomMargin -= vOffset;
-                    
-                    setLayoutParams(llparams);
-                
-                }
-                
-                if (params instanceof RelativeLayout.LayoutParams) {
-                
-                    int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
-                    
-                    RelativeLayout.LayoutParams rlparams = (RelativeLayout.LayoutParams) params;
-                    rlparams.bottomMargin -= vOffset;
-                    
-                    setLayoutParams(rlparams);
-                
-                }
-            
-            }
+            LayerDrawable background = (LayerDrawable) getBackground();
+            background.setLayerInset(0, 0, (vOffset / 4), 0, vOffset);
         
         }
-        
-        invalidate();
     
+    }
+    
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        return (((mDrawableHotspotTouch != null) && mDrawableHotspotTouch.onTouch(this, event))
+            || super.onTouchEvent(event));
     }
     
     /**
@@ -756,53 +676,132 @@ public class MaterialTextView extends TextView {
     }
     
     @Override
-    public void setBackgroundResource(int resid) {
+    public void setBackgroundColor(int color) {
     
-        // Convert the background to a LollipopDrawable to use theme references and ripple in xml on pre-lollipop devices.
-        Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(),
-            resid, getContext().getTheme());
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setColor(color);
         
-        checkIfCanHaveElevation(resid);
+        setBackgroundDrawable(drawable);
         
-        if (mCanHaveElevation) {
+        getElevationAlphaFromColor(color);
         
-            mBackgroundNeedsUpdate = true;
-            
-            int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
-            super.setPadding(getPaddingLeft(), getPaddingTop(), getPaddingRight(), (getPaddingBottom() + vOffset));
+        if (mCornerShadowPaint != null)
+            mCornerShadowPaint.setAlpha(mElevationAlpha);
         
-        }
-        
-        if (Build.VERSION.SDK_INT >= 16)
-            setBackground(drawable);
-        else
-            //noinspection deprecation
-            setBackgroundDrawable(drawable);
+        if (mEdgeShadowPaint != null)
+            mEdgeShadowPaint.setAlpha(mElevationAlpha);
     
     }
     
-    /** Sets the base elevation of this view, in pixels. */
+    @Override
+    public void setBackground(Drawable drawable) {
+        setBackgroundDrawable(drawable);
+    }
+    
+    @Override
+    @SuppressWarnings("deprecation")
+    public void setBackgroundDrawable(Drawable drawable) {
+    
+        mElevationAlpha = 0;
+        
+        if (mCornerShadowPaint != null)
+            mCornerShadowPaint.setAlpha(mElevationAlpha);
+        
+        if (mEdgeShadowPaint != null)
+            mEdgeShadowPaint.setAlpha(mElevationAlpha);
+        
+        if (Build.VERSION.SDK_INT < 21) {
+        
+            mBackground = drawable;
+            
+            int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
+            
+            LayerDrawable layer = new LayerDrawable(new Drawable[] { mBackground } );
+            layer.setLayerInset(0, 0, (vOffset / 4), 0, vOffset);
+            
+            android.util.Log.i("MaterialTextView", "vOffset: " + vOffset);
+            
+            super.setBackgroundDrawable(layer);
+        
+        } else
+            super.setBackgroundDrawable(drawable);
+        
+        if (drawable instanceof LollipopDrawable)
+            mDrawableHotspotTouch = new DrawableHotspotTouch((LollipopDrawable) drawable);
+        else
+            mDrawableHotspotTouch = null;
+    
+    }
+    
+    @Override
+    public void setBackgroundResource(int resid) {
+    
+        // Convert the background to a LollipopDrawable to use theme references and ripple in xml on pre-lollipop devices.
+        Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
+        setBackgroundDrawable(drawable);
+        
+        getElevationAlphaFromResource(resid);
+        
+        if (mCornerShadowPaint != null)
+            mCornerShadowPaint.setAlpha(mElevationAlpha);
+        
+        if (mEdgeShadowPaint != null)
+            mEdgeShadowPaint.setAlpha(mElevationAlpha);
+    
+    }
+    
     public void setElevation(float elevation) {
     
-        if (elevation != getElevation()) {
+        if (getElevation() != elevation) {
         
-            if (Build.VERSION.SDK_INT >= 21)
+            if (Build.VERSION.SDK_INT >= 21) {
+            
                 super.setElevation(elevation);
-            
-            mElevation = elevation;
-            mRawShadowSize = toEven(elevation);
-            mShadowSize = (int) (mRawShadowSize * SHADOW_MULTIPLIER + mInsetShadow + .5f);
-            
-            if (mCanHaveElevation) {
-            
-                int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
-                super.setPadding(getPaddingLeft(), getPaddingTop(), getPaddingRight(), (getPaddingBottom() + vOffset));
+                return;
             
             }
+            
+            mElevation = elevation;
+            mRawShadowSize = toeven(elevation);
+            mShadowSize = (int) (mRawShadowSize * SHADOW_MULTIPLIER + mInsetShadow + .5f);
+            
+            int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
+            super.setPadding(getPaddingLeft(), (getPaddingTop() + (vOffset / 4)),
+                getPaddingRight(), (getPaddingBottom() + vOffset));
             
             invalidate();
         
         }
+    
+    }
+    
+    public void setLayoutParams(ViewGroup.LayoutParams params) {
+    
+        if (mBackground != null) {
+        
+            int vOffset = (int) Math.ceil((float) (mRawShadowSize * SHADOW_MULTIPLIER + (1 - COS_45) * 0));
+            
+            if (params instanceof LinearLayout.LayoutParams) {
+            
+                LinearLayout.LayoutParams llparams = (LinearLayout.LayoutParams) params;
+                llparams.bottomMargin -= vOffset;
+                llparams.topMargin -= (vOffset / 4);
+                
+                params = llparams;
+            
+            } else if (params instanceof RelativeLayout.LayoutParams) {
+            
+                RelativeLayout.LayoutParams rlparams = (RelativeLayout.LayoutParams) params;
+                rlparams.bottomMargin -= vOffset;
+                rlparams.topMargin -= (vOffset / 4);
+                
+                params = rlparams;
+            
+            }
+        
+        }
+        
+        super.setLayoutParams(params);
     
     }
     
@@ -813,8 +812,11 @@ public class MaterialTextView extends TextView {
         
         // to get the corrent padding dimensions we first need to check if the bottom
         // already covers the shadow offset and subtract the offset if present.
-        if (bottom == getPaddingBottom() + vOffset)
+        if (bottom == (getPaddingBottom() + vOffset))
             bottom -= vOffset;
+        
+        if (top == (getPaddingTop() + (vOffset / 4)))
+            top -= (vOffset / 4);
         
         // store the new padding dimensions
         if (mDefaultPaddingBottom != bottom)
@@ -830,8 +832,12 @@ public class MaterialTextView extends TextView {
             mDefaultPaddingTop = top;
         
         // re-add the shadow offset to top and bottom
-        if (mCanHaveElevation)
+        if (mBackground != null) {
+        
             bottom += vOffset;
+            top += (vOffset / 4);
+        
+        }
         
         // set the padding of the view using the new dimensions
         super.setPadding(left, top, right, bottom);
@@ -860,14 +866,11 @@ public class MaterialTextView extends TextView {
     
     }
     
-    private void setTextSelectHandle(String field_id, int resid, boolean needsTint) {
+    private void setTextSelectHandle(String field_id, int resid) {
     
         try {
         
             Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
-            
-            if (needsTint)
-                tintDrawable((LollipopDrawable) drawable);
             
             if (mEditor == null) {
             
@@ -888,7 +891,7 @@ public class MaterialTextView extends TextView {
     }
     
     /** Casts the value to an even integer. */
-    private int toEven(float value) {
+    private int toeven(float value) {
     
         int i = (int) (value + .5f);
         
@@ -899,47 +902,6 @@ public class MaterialTextView extends TextView {
     
     }
     
-    private void tintDrawable(LollipopDrawable drawable) {
-    
-        int colorAccent = getColorFromAttrRes(getContext(), R.attr.colorAccent);
-        
-        if (colorAccent == 0)
-            if (Build.VERSION.SDK_INT >= 21)
-                colorAccent = getColorFromAttrRes(getContext(), android.R.attr.colorAccent);
-        
-        if (colorAccent == 0) {
-        
-            final TypedArray aa = getContext().obtainStyledAttributes(new int[] { android.R.attr.windowBackground });
-            final int themeColorBackground = aa.getColor(0, 0);
-            aa.recycle();
-            
-            final float[] hsv = new float[3];
-            Color.colorToHSV(themeColorBackground, hsv);
-            
-            if (hsv[2] > 0.5f) {
-            
-                if (Build.VERSION.SDK_INT >= 23)
-                    colorAccent = getResources().getColor(R.color.accent_material_light, getContext().getTheme());
-                else
-                    //noinspection deprecation
-                    colorAccent = getResources().getColor(R.color.accent_material_light);
-            
-            } else {
-            
-                if (Build.VERSION.SDK_INT >= 23)
-                    colorAccent = getResources().getColor(R.color.accent_material_dark, getContext().getTheme());
-                else
-                    //noinspection deprecation
-                    colorAccent = getResources().getColor(R.color.accent_material_dark);
-            
-            }
-        
-        }
-        
-        drawable.setTint(colorAccent);
-    
-    }
-
     /** Transforms source text into an ALL CAPS string, locale-aware. */
     private class AllCapsTransformationMethod implements TransformationMethod {
     
