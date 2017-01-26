@@ -22,7 +22,7 @@ Preview
     Step 2. Add the dependency
     
     dependencies {
-        compile 'com.github.robertapengelly:android-material-textview:1.0.0'
+        compile 'com.github.robertapengelly:android-material-textview:1.0.1'
     }
 
 # Usage
@@ -61,7 +61,6 @@ Preview
             
             <!-- Color palette -->
             <item name="colorAccent">@color/accent_material_dark</item>
-            <item name="colorControlActivated">?attr/colorAccent</item>
         </style>
     
     Honycomb and newer (values-v11/styles.xml)
@@ -94,7 +93,6 @@ Preview
             
             <!-- Color palette -->
             <item name="colorAccent">@color/accent_material_dark</item>
-            <item name="colorControlActivated">?attr/colorAccent</item>
         </style>
     
     Lollipop and newer (values-v21/styles.xml)
@@ -127,13 +125,12 @@ Preview
             
             <!-- Color palette -->
             <item name="android:colorAccent">@color/accent_material_dark</item>
-            <item name="android:colorControlActivated">?android:attr/colorAccent</item>
         </style>
     
     Adding a MaterialTextView widget (layout/activity_main.xml)
     
     If you use android:elevation it will be replaced with app:elevation.
-    If you use android:textAllCaps it will be replaced with app:textAllCaps.
+    If you use android:textAllCaps it will be replaced with app:textAllCaps if specified.
     
     If you want to use a ripple background on all-devices add app:background="@drawable/your_drawable_name" and it will be inflated.
     When you use app:background it will only take effect if there's no background.
