@@ -148,7 +148,7 @@ public class MaterialTextView extends TextView {
                 
                 try {
                 
-                    Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
+                    Drawable drawable = LollipopDrawablesCompat.getDrawable(context, resid);
                     
                     Field field = mEditor.getClass().getDeclaredField("mCursorDrawable");
                     field.setAccessible(true);
@@ -870,7 +870,7 @@ public class MaterialTextView extends TextView {
     
         try {
         
-            Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
+            Drawable drawable = LollipopDrawablesCompat.getDrawable(getContext(), resid);
             
             if (mEditor == null) {
             
