@@ -737,7 +737,7 @@ public class MaterialTextView extends TextView {
     public void setBackgroundResource(int resid) {
     
         // Convert the background to a LollipopDrawable to use theme references and ripple in xml on pre-lollipop devices.
-        Drawable drawable = LollipopDrawablesCompat.getDrawable(getResources(), resid, getContext().getTheme());
+        Drawable drawable = LollipopDrawablesCompat.getDrawable(getContext(), resid);
         setBackgroundDrawable(drawable);
         
         getElevationAlphaFromResource(resid);
