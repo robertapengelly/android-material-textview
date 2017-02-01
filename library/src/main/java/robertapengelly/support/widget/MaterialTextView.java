@@ -76,6 +76,11 @@ public class MaterialTextView extends TextView {
         
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.MaterialTextView, defStyleAttr, 0);
         
+        int ap = a.getResourceId(R.styleable.MaterialTextView_android_textAppearance, -1);
+        
+        if (ap != -1)
+            setTextAppearanceInternal(ap);
+        
         int count = a.getIndexCount();
         
         for (int i = 0; i < count; ++i) {
@@ -516,6 +521,28 @@ public class MaterialTextView extends TextView {
         top += contentHeight;
         
         super.setPadding(left, top, right, bottom);
+    
+    }
+    
+    public void setTextAppearance(int resid) {
+        super.setTextAppearance(resid);
+        
+        setTextAppearanceInternal(resid);
+    
+    }
+    
+    private void setTextAppearanceInternal(int resid) {
+    
+        TypedArray appearance = getContext().obtainStyledAttributes(resid, R.styleable.TextAppearance);
+        
+        if (appearance != null) {
+        
+            if (appearance.hasValue(R.styleable.TextAppearance_textAllCaps))
+                setAllCaps(appearance.getBoolean(R.styleable.TextAppearance_textAllCaps, true));
+            
+            appearance.recycle();
+        
+        }
     
     }
     
