@@ -20,6 +20,12 @@
             (black). -->
         <attr name="android:background" />
         
+        <!-- Workaround to read user defined minimum height -->
+        <attr name="android:minHeight"/>
+        
+        <!-- Workaround to read user defined minimum width -->
+        <attr name="android:minWidth"/>
+        
         <!-- Sets the padding, in pixels, of all four edges.  Padding is defined as
              space between the edges of the view and the view's content. A views size
              will include it's padding.  If a {@link android.R.attr#background}

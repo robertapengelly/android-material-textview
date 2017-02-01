@@ -52,7 +52,7 @@
     </style>
     
     <style name="Widget.Material.TextView" parent="@android:style/Widget.TextView">
-        <item name="android:textAppearance">@style/TextAppearance.Material.Small</item>
+        <item name="android:textAppearance">?android:attr/textAppearanceSmall</item>
         <item name="android:textCursorDrawable" tools:ignore="NewApi">@drawable/text_cursor_material</item>
         <item name="android:textSelectHandle">@drawable/text_select_handle_middle_material</item>
         <item name="android:textSelectHandleLeft">@drawable/text_select_handle_left_material</item>
