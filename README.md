@@ -4,7 +4,7 @@ Backported material styled TextView for use on pre-lollipop devices. Supports An
 
 Preview
 
-![materialtextviewscreenshot](https://cloud.githubusercontent.com/assets/5245027/22207932/008b30ce-e179-11e6-96bc-3f6a510d9136.png)
+![materialtextviewscreenshot](https://cloud.githubusercontent.com/assets/5245027/22506974/1eecfcd8-e87b-11e6-9d71-36769470f504.png)
 
 # Installation
 
@@ -22,7 +22,7 @@ Preview
     Step 2. Add the dependency
     
     dependencies {
-        compile 'com.github.robertapengelly:android-material-textview:1.0.2'
+        compile 'com.github.robertapengelly:android-material-textview:1.0.4'
     }
 
 # Usage
@@ -129,7 +129,7 @@ Preview
     
     Adding a MaterialTextView widget (layout/activity_main.xml)
     
-    If you use android:elevation it will be replaced with app:elevation.
+    If you use android:elevation it will be replaced with app:elevation if specified.
     If you use android:textAllCaps it will be replaced with app:textAllCaps if specified.
     
     If you want to use a ripple background on all-devices add app:background="@drawable/your_drawable_name" and it will be inflated.
