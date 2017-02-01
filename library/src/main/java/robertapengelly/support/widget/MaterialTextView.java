@@ -87,7 +87,7 @@ public class MaterialTextView extends TextView {
         
             int attr = a.getIndex(i);
             
-            if ((attr == R.styleable.MaterialTextView_android_background) || (attr == R.styleable.MaterialTextView_background)) {
+            if (attr == R.styleable.MaterialTextView_android_background) {
             
                 int resid = a.getResourceId(attr, 0);
                 
@@ -135,6 +135,16 @@ public class MaterialTextView extends TextView {
             
                 int resid = a.getResourceId(attr, 0);
                 setTextSelectHandle("mSelectHandleRight", resid);
+            
+            } else if (attr == R.styleable.MaterialTextView_background) {
+            
+                if (getBackground() != null)
+                    continue;
+                
+                int resid = a.getResourceId(attr, 0);
+                
+                if (resid != 0)
+                    setBackgroundResource(resid);
             
             }
         

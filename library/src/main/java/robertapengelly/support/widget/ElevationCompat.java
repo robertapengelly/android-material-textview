@@ -100,6 +100,37 @@ class ElevationCompat {
     
     }
     
+    private static int getShadowAlphaFromInset(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
+        throws XmlPullParserException, IOException {
+        
+        int alpha = 0;
+        
+        final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.InsetDrawable);
+        final int resid = a.getResourceId(R.styleable.InsetDrawable_android_drawable, 0);
+        
+        a.recycle();
+        
+        if (resid != 0)
+            alpha = getShadowAlphaFromDrawable(r, resid, theme);
+        else {
+        
+            int type;
+            
+            //noinspection StatementWithEmptyBody
+            while ((type=parser.next()) == XmlPullParser.TEXT);
+            
+            if (type != XmlPullParser.START_TAG)
+                throw new XmlPullParserException(parser.getPositionDescription()
+                    + ": <inset> tag requires a 'drawable' attribute or child tag defining a drawable");
+            
+            alpha = getShadowAlphaFromXmlInner(r, parser, attrs, theme);
+        
+        }
+        
+        return alpha;
+    
+    }
+    
     private static int getShadowAlphaFromLayerList(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
         throws XmlPullParserException, IOException {
         
@@ -134,55 +165,6 @@ class ElevationCompat {
                         + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
                 
                 return getShadowAlphaFromXmlInner(r, parser, attrs, theme);
-            
-            }
-        
-        }
-        
-        return alpha;
-    
-    }
-    
-    private static int getShadowAlphaFromRipple(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
-        throws XmlPullParserException, IOException {
-        
-        final int innerDepth = (parser.getDepth() + 1);
-        
-        int alpha = 0;
-        int depth, type;
-        
-        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
-            || (type != XmlPullParser.END_TAG))) {
-            
-            if (type != XmlPullParser.START_TAG)
-                continue;
-            
-            if ((depth > innerDepth) || !parser.getName().equals("item"))
-                continue;
-            
-            final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.LayerDrawableItem);
-            
-            final int id = a.getResourceId(R.styleable.LayerDrawableItem_android_id, View.NO_ID);
-            final int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
-            
-            a.recycle();
-            
-            if (id != android.R.id.mask) {
-            
-                if (resid != 0)
-                    alpha = getShadowAlphaFromDrawable(r, resid, theme);
-                else {
-                
-                    //noinspection StatementWithEmptyBody
-                    while ((type = parser.next()) == XmlPullParser.TEXT);
-                    
-                    if (type != XmlPullParser.START_TAG)
-                        throw new XmlPullParserException(parser.getPositionDescription()
-                            + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
-                    
-                    alpha = getShadowAlphaFromXmlInner(r, parser, attrs, theme);
-                
-                }
             
             }
         
@@ -279,6 +261,55 @@ class ElevationCompat {
     
     }
     
+    private static int getShadowAlphaFromRipple(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
+        throws XmlPullParserException, IOException {
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        
+        int alpha = 0;
+        int depth, type;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
+            || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if ((depth > innerDepth) || !parser.getName().equals("item"))
+                continue;
+            
+            final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.LayerDrawableItem);
+            
+            final int id = a.getResourceId(R.styleable.LayerDrawableItem_android_id, View.NO_ID);
+            final int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
+            
+            a.recycle();
+            
+            if (id != android.R.id.mask) {
+            
+                if (resid != 0)
+                    alpha = getShadowAlphaFromDrawable(r, resid, theme);
+                else {
+                
+                    //noinspection StatementWithEmptyBody
+                    while ((type = parser.next()) == XmlPullParser.TEXT);
+                    
+                    if (type != XmlPullParser.START_TAG)
+                        throw new XmlPullParserException(parser.getPositionDescription()
+                            + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
+                    
+                    alpha = getShadowAlphaFromXmlInner(r, parser, attrs, theme);
+                
+                }
+            
+            }
+        
+        }
+        
+        return alpha;
+    
+    }
+    
     private static int getShadowAlphaFromShape(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
         throws XmlPullParserException, IOException {
         
@@ -345,6 +376,9 @@ class ElevationCompat {
         
             switch (name) {
             
+                case "inset":
+                    alpha = getShadowAlphaFromInset(r, parser, attrs, theme);
+                    break;
                 case "layer-list":
                     alpha = getShadowAlphaFromLayerList(r, parser, attrs, theme);
                     break;
