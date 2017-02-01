@@ -4,7 +4,7 @@ Backported material styled TextView for use on pre-lollipop devices. Supports An
 
 Preview
 
-![materialtextviewscreenshot](https://cloud.githubusercontent.com/assets/5245027/22506974/1eecfcd8-e87b-11e6-9d71-36769470f504.png)
+![materialtextviewscreenshot](https://cloud.githubusercontent.com/assets/5245027/22507274/c213d5d4-e87c-11e6-983a-714ddbd03de6.png)
 
 # Installation
 
