@@ -35,7 +35,7 @@ public class MaterialTextView extends TextView {
     private int mOriginalMarginBottom, mOriginalMarginTop;
     private int mOriginalPaddingBottom, mOriginalPaddingLeft, mOriginalPaddingRight, mOriginalPaddingTop;
     
-    private Drawable mShadow = null;
+    private Drawable mBackground = null, mShadow = null;
     private DrawableHotspotTouch mDrawableHotspotTouch;
     
     private Object mEditor;
@@ -178,7 +178,7 @@ public class MaterialTextView extends TextView {
         
         if (mShadow != null) {
         
-            LayerDrawable layers = (LayerDrawable) getBackground();
+            LayerDrawable layers = (LayerDrawable) super.getBackground();
             
             Drawable background = layers.getDrawable(1);
             
@@ -189,6 +189,11 @@ public class MaterialTextView extends TextView {
         
         return super.dispatchTouchEvent(event);
     
+    }
+    
+    @Override
+    public Drawable getBackground() {
+        return mBackground;
     }
     
     public float getElevation() {
@@ -285,8 +290,8 @@ public class MaterialTextView extends TextView {
     @Override
     public void setBackgroundColor(int color) {
     
-        Drawable drawable = new GradientDrawable();
-        ((GradientDrawable) drawable).setColor(color);
+        mBackground = new GradientDrawable();
+        ((GradientDrawable) mBackground).setColor(color);
         
         if (Build.VERSION.SDK_INT < 21) {
         
@@ -295,7 +300,7 @@ public class MaterialTextView extends TextView {
             
             mShadow = shadow;
             
-            LayerDrawable layers = new LayerDrawable(new Drawable[] { mShadow, drawable });
+            LayerDrawable layers = new LayerDrawable(new Drawable[] { mShadow, mBackground });
             
             //noinspection deprecation
             super.setBackgroundDrawable(layers);
@@ -304,7 +309,7 @@ public class MaterialTextView extends TextView {
         
         } else
             //noinspection deprecation
-            super.setBackgroundDrawable(drawable);
+            super.setBackgroundDrawable(mBackground);
         
         mDrawableHotspotTouch = null;
     
@@ -315,8 +320,11 @@ public class MaterialTextView extends TextView {
     public void setBackgroundDrawable(Drawable drawable) {
         super.setBackgroundDrawable(drawable);
         
-        if (drawable instanceof LollipopDrawable)
-            mDrawableHotspotTouch = new DrawableHotspotTouch((LollipopDrawable) drawable);
+        mBackground = drawable;
+        mShadow = null;
+        
+        if (mBackground instanceof LollipopDrawable)
+            mDrawableHotspotTouch = new DrawableHotspotTouch((LollipopDrawable) mBackground);
         else
             mDrawableHotspotTouch = null;
     
@@ -325,7 +333,7 @@ public class MaterialTextView extends TextView {
     @Override
     public void setBackgroundResource(int resid) {
     
-        Drawable drawable = LollipopDrawablesCompat.getDrawable(getContext(), resid);
+        mBackground = LollipopDrawablesCompat.getDrawable(getContext(), resid);
         
         if (Build.VERSION.SDK_INT < 21) {
         
@@ -335,15 +343,21 @@ public class MaterialTextView extends TextView {
             
                 if (name.equals("selector"))
                     mShadow = ElevationCompat.getShadowStatesFromResource(getResources(), resid,
-                        getContext().getTheme(), this, (StateListDrawable) drawable);
+                        getContext().getTheme(), this, (StateListDrawable) mBackground);
                 else
                     mShadow = ElevationCompat.getShadowFromResource(getResources(), resid,
                         getContext().getTheme(), this);
                 
-                LayerDrawable layers = new LayerDrawable(new Drawable[] { mShadow, drawable });
+                if (mShadow != null) {
                 
-                //noinspection deprecation
-                super.setBackgroundDrawable(layers);
+                    LayerDrawable layers = new LayerDrawable(new Drawable[] { mShadow, mBackground });
+                    
+                    //noinspection deprecation
+                    super.setBackgroundDrawable(layers);
+                
+                } else
+                    //noinspection deprecation
+                    super.setBackgroundDrawable(mBackground);
             
             }
             
@@ -351,10 +365,10 @@ public class MaterialTextView extends TextView {
         
         } else
             //noinspection deprecation;
-            super.setBackgroundDrawable(drawable);
+            super.setBackgroundDrawable(mBackground);
         
-        if (drawable instanceof LollipopDrawable)
-            mDrawableHotspotTouch = new DrawableHotspotTouch((LollipopDrawable) drawable);
+        if (mBackground instanceof LollipopDrawable)
+            mDrawableHotspotTouch = new DrawableHotspotTouch((LollipopDrawable) mBackground);
         else
             mDrawableHotspotTouch = null;
     
@@ -460,7 +474,7 @@ public class MaterialTextView extends TextView {
         
         int contentHeight = ((mMinHeight / 2) - (mBaseHeight / 2));
         
-        LayerDrawable layers = (LayerDrawable) getBackground();
+        LayerDrawable layers = (LayerDrawable) super.getBackground();
         layers.setLayerInset(1, 0, contentHeight, 0, contentHeight);
         
         super.setPadding(getPaddingLeft(), (getPaddingTop() + contentHeight),
@@ -635,7 +649,7 @@ public class MaterialTextView extends TextView {
         
         int contentHeight = ((mMinHeight / 2) - (mBaseHeight / 2));
         
-        LayerDrawable layers = (LayerDrawable) getBackground();
+        LayerDrawable layers = (LayerDrawable) super.getBackground();
         layers.setLayerInset(1, 0, contentHeight, 0, contentHeight);
         
         super.setPadding(getPaddingLeft(), (getPaddingTop() + contentHeight),
