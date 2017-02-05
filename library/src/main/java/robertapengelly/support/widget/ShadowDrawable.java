@@ -15,10 +15,14 @@ import  android.graphics.Shader;
 import  android.graphics.drawable.Drawable;
 import  android.util.TypedValue;
 
-/** A rounded rectangle drawable which also includes a shadow around. */
-class RoundRectDrawableWithShadow extends Drawable {
+class ShadowDrawable extends Drawable {
 
     private final static float SHADOW_MULTIPLIER = 1.5f;
+    
+    private int mInsetBottom = 0;
+    private int mInsetLeft = 0;
+    private int mInsetRight = 0;
+    private int mInsetTop = 0;
     
     private final int mInsetShadow; // extra shadow to avoid gaps between card and shadow
     private final int mShadowEndColor;
@@ -48,7 +52,7 @@ class RoundRectDrawableWithShadow extends Drawable {
     
     private Path mCornerShadowPath;
     
-    RoundRectDrawableWithShadow(Resources resources, float radius, float shadowSize) {
+    ShadowDrawable(Resources resources, float radius, float shadowSize) {
     
         mInsetShadow = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1f, resources.getDisplayMetrics());
         mShadowStartColor = Color.parseColor("#37000000");
@@ -124,7 +128,14 @@ class RoundRectDrawableWithShadow extends Drawable {
     
         if (mDirty) {
         
-            buildComponents(getBounds());
+            Rect bounds = getBounds();
+            
+            bounds.bottom -= mInsetBottom;
+            bounds.left += mInsetLeft;
+            bounds.right -= mInsetRight;
+            bounds.top += mInsetTop;
+            
+            buildComponents(bounds);
             mDirty = false;
         
         }
@@ -196,8 +207,8 @@ class RoundRectDrawableWithShadow extends Drawable {
     }
     
     @Override
-    public int getOpacity() {
-        return PixelFormat.TRANSLUCENT;
+    public int getAlpha() {
+        return mEdgeShadowPaint.getAlpha();
     }
     
     float getMinHeight() {
@@ -218,6 +229,11 @@ class RoundRectDrawableWithShadow extends Drawable {
     }
     
     @Override
+    public int getOpacity() {
+        return PixelFormat.TRANSLUCENT;
+    }
+    
+    @Override
     protected void onBoundsChange(Rect bounds) {
         super.onBoundsChange(bounds);
         
@@ -235,6 +251,19 @@ class RoundRectDrawableWithShadow extends Drawable {
     
     @Override
     public void setColorFilter(ColorFilter cf) {}
+    
+    void setInsets(int insetLeft, int insetTop, int insetRight, int insetBottom) {
+    
+        mDirty = true;
+        
+        mInsetBottom = insetBottom;
+        mInsetLeft = insetLeft;
+        mInsetRight = insetRight;
+        mInsetTop = insetTop;
+        
+        invalidateSelf();
+    
+    }
     
     void setShadowSize(float shadowSize, float maxShadowSize) {
     

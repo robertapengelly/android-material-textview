@@ -5,6 +5,7 @@ import  android.content.res.Resources;
 import  android.content.res.Resources.Theme;
 import  android.content.res.TypedArray;
 import  android.content.res.XmlResourceParser;
+import  android.graphics.drawable.Drawable;
 import  android.util.AttributeSet;
 import  android.util.TypedValue;
 import  android.util.Xml;
@@ -67,51 +68,16 @@ class ElevationCompat {
     
     }
     
-    static int getShadowAlphaFromDrawable(Resources res, int resid, Resources.Theme theme) {
-    
-        TypedValue value = new TypedValue();
-        res.getValue(resid, value, true);
+    private static Drawable getShadowFromInset(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme,
+        MaterialTextView materialTextView) throws XmlPullParserException, IOException {
         
-        if (value.resourceId == 0)
-            return 0;
-        
-        if (value.string == null)
-            throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
-                Integer.toHexString(value.resourceId) + ")  is not a Drawable (color or path): " + value);
-        
-        String file = value.string.toString();
-        
-        if (!file.endsWith(".xml"))
-            return 0;
-        
-        int alpha = 0;
-        
-        try {
-        
-            XmlResourceParser rp = res.getAssets().openXmlResourceParser(value.assetCookie, file);
-            
-            alpha = getShadowAlphaFromXml(res, rp, theme);
-            
-            rp.close();
-        
-        } catch (Exception ignored) {}
-        
-        return alpha;
-    
-    }
-    
-    private static int getShadowAlphaFromInset(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
-        throws XmlPullParserException, IOException {
-        
-        int alpha = 0;
+        Drawable shadow;
         
         final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.InsetDrawable);
         final int resid = a.getResourceId(R.styleable.InsetDrawable_android_drawable, 0);
         
-        a.recycle();
-        
         if (resid != 0)
-            alpha = getShadowAlphaFromDrawable(r, resid, theme);
+            shadow = getShadowFromResource(r, resid, theme, materialTextView);
         else {
         
             int type;
@@ -123,20 +89,58 @@ class ElevationCompat {
                 throw new XmlPullParserException(parser.getPositionDescription()
                     + ": <inset> tag requires a 'drawable' attribute or child tag defining a drawable");
             
-            alpha = getShadowAlphaFromXmlInner(r, parser, attrs, theme);
+            shadow = getShadowFromXmlInner(r, parser, attrs, theme, materialTextView);
         
         }
         
-        return alpha;
+        if (shadow != null) {
+        
+            int insetBottom = 0, insetLeft = 0, insetRight = 0, insetTop = 0;
+            
+            final int N = a.getIndexCount();
+            
+            for (int i = 0; i < N; ++i) {
+            
+                final int attr = a.getIndex(i);
+                
+                if (attr == R.styleable.InsetDrawable_android_inset) {
+                
+                    final int inset = a.getDimensionPixelOffset(attr, Integer.MIN_VALUE);
+                    
+                    if (inset != Integer.MIN_VALUE) {
+                    
+                        insetBottom = inset;
+                        insetLeft = inset;
+                        insetRight = inset;
+                        insetTop = inset;
+                    
+                    }
+                
+                } else if (attr == R.styleable.InsetDrawable_android_insetBottom)
+                    insetBottom = a.getDimensionPixelOffset(attr, insetBottom);
+                else if (attr == R.styleable.InsetDrawable_android_insetLeft)
+                    insetLeft = a.getDimensionPixelOffset(attr, insetLeft);
+                else if (attr == R.styleable.InsetDrawable_android_insetRight)
+                    insetRight = a.getDimensionPixelOffset(attr, insetRight);
+                else if (attr == R.styleable.InsetDrawable_android_insetTop)
+                    insetTop = a.getDimensionPixelOffset(attr, insetTop);
+            
+            }
+            
+            ((ShadowDrawable) shadow).setInsets(insetLeft, insetTop, insetRight, insetBottom);
+        
+        }
+        
+        a.recycle();
+        
+        return shadow;
     
     }
     
-    private static int getShadowAlphaFromLayerList(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
-        throws XmlPullParserException, IOException {
+    private static Drawable getShadowFromLayerList(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme,
+        MaterialTextView materialTextView) throws XmlPullParserException, IOException {
         
         final int innerDepth = (parser.getDepth() + 1);
-        
-        int alpha = 0;
         int depth, type;
         
         while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
@@ -154,7 +158,7 @@ class ElevationCompat {
             a.recycle();
             
             if (resid != 0)
-                return getShadowAlphaFromDrawable(r, resid, theme);
+                return getShadowFromResource(r, resid, theme, materialTextView);
             else {
             
                 //noinspection StatementWithEmptyBody
@@ -164,23 +168,24 @@ class ElevationCompat {
                     throw new XmlPullParserException(parser.getPositionDescription()
                         + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
                 
-                return getShadowAlphaFromXmlInner(r, parser, attrs, theme);
+                return getShadowFromXmlInner(r, parser, attrs, theme, materialTextView);
             
             }
         
         }
         
-        return alpha;
+        return null;
     
     }
     
-    static void getShadowStatesFromResource(Resources res, int resid, Resources.Theme theme, StateListDrawable shadows) {
-    
+    static Drawable getShadowFromResource(Resources res, int resid, Resources.Theme theme,
+        MaterialTextView materialTextView) {
+        
         TypedValue value = new TypedValue();
         res.getValue(resid, value, true);
         
         if (value.resourceId == 0)
-            return;
+            return null;
         
         if (value.string == null)
             throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
@@ -189,7 +194,185 @@ class ElevationCompat {
         String file = value.string.toString();
         
         if (!file.endsWith(".xml"))
-            return;
+            return null;
+        
+        Drawable shadow = null;
+        
+        try {
+        
+            XmlResourceParser rp = res.getAssets().openXmlResourceParser(value.assetCookie, file);
+            
+            shadow = getShadowFromXml(res, rp, theme, materialTextView);
+            
+            rp.close();
+        
+        } catch (Exception ignored) {}
+        
+        return shadow;
+    
+    }
+    
+    private static Drawable getShadowFromRipple(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme,
+        MaterialTextView materialTextView) throws XmlPullParserException, IOException {
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        int depth, type;
+        
+        Drawable shadow = null;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
+            || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if ((depth > innerDepth) || !parser.getName().equals("item"))
+                continue;
+            
+            final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.LayerDrawableItem);
+            
+            final int id = a.getResourceId(R.styleable.LayerDrawableItem_android_id, View.NO_ID);
+            final int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
+            
+            a.recycle();
+            
+            if (id != android.R.id.mask) {
+            
+                if (resid != 0)
+                    shadow = getShadowFromResource(r, resid, theme, materialTextView);
+                else {
+                
+                    //noinspection StatementWithEmptyBody
+                    while ((type = parser.next()) == XmlPullParser.TEXT);
+                    
+                    if (type != XmlPullParser.START_TAG)
+                        throw new XmlPullParserException(parser.getPositionDescription()
+                            + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
+                    
+                    shadow = getShadowFromXmlInner(r, parser, attrs, theme, materialTextView);
+                
+                }
+            
+            }
+        
+        }
+        
+        return shadow;
+    
+    }
+    
+    private static Drawable getShadowFromShape(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme,
+        MaterialTextView materialTextView) throws XmlPullParserException, IOException {
+        
+        TypedArray a;
+        
+        final int innerDepth = (parser.getDepth() + 1);
+        int depth, type;
+        
+        Drawable shadow = null;
+        
+        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT)
+            && (((depth = parser.getDepth()) >= innerDepth) || (type != XmlPullParser.END_TAG))) {
+            
+            if (type != XmlPullParser.START_TAG)
+                continue;
+            
+            if (depth > innerDepth)
+                continue;
+            
+            String name = parser.getName();
+            
+            if (name.equals("solid")) {
+            
+                a = obtainAttributes(r, theme, attrs, R.styleable.GradientDrawableSolid);
+                
+                final ColorStateList colorStateList = a.getColorStateList(R.styleable.GradientDrawableSolid_android_color);
+                
+                if (colorStateList != null) {
+                
+                    shadow = new ShadowDrawable(r, materialTextView.getRadius(), materialTextView.getElevation());
+                    shadow.setAlpha(getShadowAlphaFromColor(colorStateList.getDefaultColor()));
+                
+                }
+                
+                a.recycle();
+            
+            }
+        
+        }
+        
+        return shadow;
+    
+    }
+    
+    private static Drawable getShadowFromXml(Resources r, XmlPullParser parser, Resources.Theme theme,
+        MaterialTextView materialTextView) throws XmlPullParserException, IOException {
+        
+        AttributeSet attrs = Xml.asAttributeSet(parser);
+        
+        int type;
+        
+        //noinspection StatementWithEmptyBody
+        while (((type = parser.next()) != XmlPullParser.START_TAG) && (type != XmlPullParser.END_DOCUMENT));
+        
+        if (type != XmlPullParser.START_TAG)
+            throw new XmlPullParserException("No start tag found");
+        
+        return getShadowFromXmlInner(r, parser, attrs, theme, materialTextView);
+    
+    }
+    
+    private static Drawable getShadowFromXmlInner(Resources r, XmlPullParser parser, AttributeSet attrs,
+        Resources.Theme theme, MaterialTextView materialTextView) throws XmlPullParserException, IOException {
+        
+        final String name = parser.getName();
+        
+        Drawable shadow = null;
+        
+        try {
+        
+            switch (name) {
+            
+                case "inset":
+                    shadow = getShadowFromInset(r, parser, attrs, theme, materialTextView);
+                    break;
+                case "layer-list":
+                    shadow = getShadowFromLayerList(r, parser, attrs, theme, materialTextView);
+                    break;
+                case "ripple":
+                    shadow = getShadowFromRipple(r, parser, attrs, theme, materialTextView);
+                    break;
+                case "shape":
+                    shadow = getShadowFromShape(r, parser, attrs, theme, materialTextView);
+                    break;
+            
+            }
+        
+        } catch (Exception ignore) {}
+        
+        return shadow;
+    
+    }
+    
+    static Drawable getShadowStatesFromResource(Resources res, int resid, Resources.Theme theme,
+        MaterialTextView materialTextView, StateListDrawable states) {
+    
+        TypedValue value = new TypedValue();
+        res.getValue(resid, value, true);
+        
+        if (value.resourceId == 0)
+            return null;
+        
+        if (value.string == null)
+            throw new Resources.NotFoundException("Resource \"" + res.getResourceName(value.resourceId) + "\" (" +
+                Integer.toHexString(value.resourceId) + ")  is not a Drawable (color or path): " + value);
+        
+        String file = value.string.toString();
+        
+        if (!file.endsWith(".xml"))
+            return null;
+        
+        StateListDrawable shadows = new StateListDrawable();
         
         try {
         
@@ -207,7 +390,8 @@ class ElevationCompat {
             
             final int innerDepth = (rp.getDepth() + 1);
             
-            int alpha, depth, shadow = 0;
+            int depth, j = 0;
+            Drawable shadow;
             
             while (((type = rp.next()) != XmlPullParser.END_DOCUMENT) && (((depth = rp.getDepth()) >= innerDepth)
                 || (type != XmlPullParser.END_TAG))) {
@@ -236,7 +420,7 @@ class ElevationCompat {
                 }
                 
                 if (drawableRes != 0)
-                    alpha = getShadowAlphaFromDrawable(res, drawableRes, theme);
+                    shadow = getShadowFromResource(res, drawableRes, theme, materialTextView);
                 else {
                 
                     //noinspection StatementWithEmptyBody
@@ -246,154 +430,20 @@ class ElevationCompat {
                         throw new XmlPullParserException(rp.getPositionDescription()
                             + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
                     
-                    alpha = getShadowAlphaFromXmlInner(res, rp, attrs, theme);
+                    shadow = getShadowFromXmlInner(res, rp, attrs, theme, materialTextView);
                 
                 }
                 
-                shadows.getStateDrawable(shadow).setAlpha(alpha);
-                shadow++;
+                shadows.addState(states.getStateSet(j), shadow);
+                j++;
             
             }
             
             rp.close();
         
         } catch (Exception ignored) {}
-    
-    }
-    
-    private static int getShadowAlphaFromRipple(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
-        throws XmlPullParserException, IOException {
         
-        final int innerDepth = (parser.getDepth() + 1);
-        
-        int alpha = 0;
-        int depth, type;
-        
-        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT) && (((depth = parser.getDepth()) >= innerDepth)
-            || (type != XmlPullParser.END_TAG))) {
-            
-            if (type != XmlPullParser.START_TAG)
-                continue;
-            
-            if ((depth > innerDepth) || !parser.getName().equals("item"))
-                continue;
-            
-            final TypedArray a = obtainAttributes(r, theme, attrs, R.styleable.LayerDrawableItem);
-            
-            final int id = a.getResourceId(R.styleable.LayerDrawableItem_android_id, View.NO_ID);
-            final int resid = a.getResourceId(R.styleable.LayerDrawableItem_android_drawable, 0);
-            
-            a.recycle();
-            
-            if (id != android.R.id.mask) {
-            
-                if (resid != 0)
-                    alpha = getShadowAlphaFromDrawable(r, resid, theme);
-                else {
-                
-                    //noinspection StatementWithEmptyBody
-                    while ((type = parser.next()) == XmlPullParser.TEXT);
-                    
-                    if (type != XmlPullParser.START_TAG)
-                        throw new XmlPullParserException(parser.getPositionDescription()
-                            + ": <item> tag requires a 'drawable' attribute or child tag defining a drawable");
-                    
-                    alpha = getShadowAlphaFromXmlInner(r, parser, attrs, theme);
-                
-                }
-            
-            }
-        
-        }
-        
-        return alpha;
-    
-    }
-    
-    private static int getShadowAlphaFromShape(Resources r, XmlPullParser parser, AttributeSet attrs, Theme theme)
-        throws XmlPullParserException, IOException {
-        
-        TypedArray a;
-        
-        final int innerDepth = (parser.getDepth() + 1);
-        int alpha = 0, depth, type;
-        
-        while (((type = parser.next()) != XmlPullParser.END_DOCUMENT)
-            && (((depth = parser.getDepth()) >= innerDepth) || (type != XmlPullParser.END_TAG))) {
-            
-            if (type != XmlPullParser.START_TAG)
-                continue;
-            
-            if (depth > innerDepth)
-                continue;
-            
-            String name = parser.getName();
-            
-            if (name.equals("solid")) {
-            
-                a = obtainAttributes(r, theme, attrs, R.styleable.GradientDrawableSolid);
-                
-                final ColorStateList colorStateList = a.getColorStateList(R.styleable.GradientDrawableSolid_android_color);
-                
-                if (colorStateList != null)
-                    alpha = getShadowAlphaFromColor(colorStateList.getDefaultColor());
-                
-                a.recycle();
-            
-            }
-        
-        }
-        
-        return alpha;
-    
-    }
-    
-    private static int getShadowAlphaFromXml(Resources r, XmlPullParser parser, Resources.Theme theme)
-        throws XmlPullParserException, IOException {
-        
-        AttributeSet attrs = Xml.asAttributeSet(parser);
-        
-        int type;
-        
-        //noinspection StatementWithEmptyBody
-        while (((type = parser.next()) != XmlPullParser.START_TAG) && (type != XmlPullParser.END_DOCUMENT));
-        
-        if (type != XmlPullParser.START_TAG)
-            throw new XmlPullParserException("No start tag found");
-        
-        return getShadowAlphaFromXmlInner(r, parser, attrs, theme);
-    
-    }
-    
-    private static int getShadowAlphaFromXmlInner(Resources r, XmlPullParser parser, AttributeSet attrs,
-        Resources.Theme theme) throws XmlPullParserException, IOException {
-        
-        final String name = parser.getName();
-        
-        int alpha = 0;
-        
-        try {
-        
-            switch (name) {
-            
-                case "inset":
-                    alpha = getShadowAlphaFromInset(r, parser, attrs, theme);
-                    break;
-                case "layer-list":
-                    alpha = getShadowAlphaFromLayerList(r, parser, attrs, theme);
-                    break;
-                case "ripple":
-                    alpha = getShadowAlphaFromRipple(r, parser, attrs, theme);
-                    break;
-                case "shape":
-                    alpha = getShadowAlphaFromShape(r, parser, attrs, theme);
-                    break;
-            
-            }
-        
-        } catch (Exception ignore) {}
-        
-        return alpha;
+        return shadows;
     
     }
     

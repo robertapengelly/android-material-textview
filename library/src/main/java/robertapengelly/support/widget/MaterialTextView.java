@@ -19,6 +19,7 @@ import  java.lang.reflect.Field;
 import  java.util.Locale;
 
 import  robertapengelly.support.graphics.drawable.GradientDrawable;
+import  robertapengelly.support.graphics.drawable.InsetDrawable;
 import  robertapengelly.support.graphics.drawable.LayerDrawable;
 import  robertapengelly.support.graphics.drawable.LollipopDrawable;
 import  robertapengelly.support.graphics.drawable.LollipopDrawablesCompat;
@@ -219,6 +220,10 @@ public class MaterialTextView extends TextView {
         return mOriginalPaddingTop;
     }
     
+    float getRadius() {
+        return mRadius;
+    }
+    
     @Override
     public void onInitializeAccessibilityEvent(AccessibilityEvent event) {
         super.onInitializeAccessibilityEvent(event);
@@ -285,7 +290,7 @@ public class MaterialTextView extends TextView {
         
         if (Build.VERSION.SDK_INT < 21) {
         
-            RoundRectDrawableWithShadow shadow = new RoundRectDrawableWithShadow(getResources(), mRadius, mElevation);
+            ShadowDrawable shadow = new ShadowDrawable(getResources(), mRadius, mElevation);
             shadow.setAlpha(ElevationCompat.getShadowAlphaFromColor(color));
             
             mShadow = shadow;
@@ -328,37 +333,12 @@ public class MaterialTextView extends TextView {
             
             if (name != null) {
             
-                if (name.equals("selector")) {
-                
-                    StateListDrawable shadows = new StateListDrawable();
-                    StateListDrawable states = (StateListDrawable) drawable;
-                    
-                    RoundRectDrawableWithShadow shadow;
-                    
-                    int count = states.getStateCount();
-                    
-                    for (int i = 0; i < count; ++i) {
-                    
-                        shadow = new RoundRectDrawableWithShadow(getResources(), mRadius, mElevation);
-                        shadow.setAlpha(0);
-                        
-                        shadows.addState(states.getStateSet(i), shadow);
-                    
-                    }
-                    
-                    ElevationCompat.getShadowStatesFromResource(getResources(), resid, getContext().getTheme(), shadows);
-                    
-                    mShadow = shadows;
-                
-                } else {
-                
-                    RoundRectDrawableWithShadow shadow = new RoundRectDrawableWithShadow(getResources(), mRadius, mElevation);
-                    shadow.setAlpha(ElevationCompat.getShadowAlphaFromDrawable(getResources(),
-                        resid, getContext().getTheme()));
-                    
-                    mShadow = shadow;
-                
-                }
+                if (name.equals("selector"))
+                    mShadow = ElevationCompat.getShadowStatesFromResource(getResources(), resid,
+                        getContext().getTheme(), this, (StateListDrawable) drawable);
+                else
+                    mShadow = ElevationCompat.getShadowFromResource(getResources(), resid,
+                        getContext().getTheme(), this);
                 
                 LayerDrawable layers = new LayerDrawable(new Drawable[] { mShadow, drawable });
                 
@@ -419,14 +399,14 @@ public class MaterialTextView extends TextView {
         
         if (mShadow instanceof StateListDrawable) {
         
-            RoundRectDrawableWithShadow shadow;
+            ShadowDrawable shadow;
             StateListDrawable states = (StateListDrawable) mShadow;
             
             int count = states.getStateCount();
             
             for (int i = 0; i < count; ++i) {
             
-                shadow = (RoundRectDrawableWithShadow) states.getStateDrawable(i);
+                shadow = (ShadowDrawable) states.getStateDrawable(i);
                 shadow.setShadowSize(mElevation, mElevation);
                 
                 shadowHeight = Math.max(shadowHeight, (int) Math.ceil(shadow.getMinHeight()));
@@ -434,9 +414,17 @@ public class MaterialTextView extends TextView {
             
             }
         
+        } else if (mShadow instanceof InsetDrawable) {
+        
+            ShadowDrawable shadow = (ShadowDrawable) ((InsetDrawable) mShadow).getDrawable();
+            shadow.setShadowSize(mElevation, mElevation);
+            
+            shadowHeight = (int) Math.ceil(shadow.getMinHeight());
+            shadowWidth = (int) Math.ceil(shadow.getMinWidth());
+        
         } else {
         
-            RoundRectDrawableWithShadow shadow = (RoundRectDrawableWithShadow) mShadow;
+            ShadowDrawable shadow = (ShadowDrawable) mShadow;
             shadow.setShadowSize(mElevation, mElevation);
             
             shadowHeight = (int) Math.ceil(shadow.getMinHeight());
@@ -589,14 +577,14 @@ public class MaterialTextView extends TextView {
         
         if (mShadow instanceof StateListDrawable) {
         
-            RoundRectDrawableWithShadow shadow;
+            ShadowDrawable shadow;
             StateListDrawable states = (StateListDrawable) mShadow;
             
             int count = states.getStateCount();
             
             for (int i = 0; i < count; ++i) {
             
-                shadow = (RoundRectDrawableWithShadow) states.getStateDrawable(i);
+                shadow = (ShadowDrawable) states.getStateDrawable(i);
                 shadow.setShadowSize(mElevation, mElevation);
                 
                 shadowHeight = Math.max(shadowHeight, (int) Math.ceil(shadow.getMinHeight()));
@@ -604,9 +592,17 @@ public class MaterialTextView extends TextView {
             
             }
         
+        } else if (mShadow instanceof InsetDrawable) {
+        
+            ShadowDrawable shadow = (ShadowDrawable) ((InsetDrawable) mShadow).getDrawable();
+            shadow.setShadowSize(mElevation, mElevation);
+            
+            shadowHeight = (int) Math.ceil(shadow.getMinHeight());
+            shadowWidth = (int) Math.ceil(shadow.getMinWidth());
+        
         } else {
         
-            RoundRectDrawableWithShadow shadow = (RoundRectDrawableWithShadow) mShadow;
+            ShadowDrawable shadow = (ShadowDrawable) mShadow;
             shadow.setShadowSize(mElevation, mElevation);
             
             shadowHeight = (int) Math.ceil(shadow.getMinHeight());
